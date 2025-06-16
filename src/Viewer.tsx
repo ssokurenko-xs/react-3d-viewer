@@ -60,23 +60,45 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
   // Generate indexed BufferGeometry from frameData as a surface or fallback to point cloud
   const geometry = React.useMemo(() => {
     if (!frameData || frameData.length === 0) return null;
+    // Find min/max z for color mapping
+    let minZ = Infinity, maxZ = -Infinity;
+    for (let i = 0; i < frameData.length; i++) {
+      if (frameData[i].z < minZ) minZ = frameData[i].z;
+      if (frameData[i].z > maxZ) maxZ = frameData[i].z;
+    }
+    // If not enough points for a surface, fallback to points
     if (frameData.length < 4) {
       const positions = new Float32Array(frameData.length * 3);
+      const colors = new Float32Array(frameData.length * 3);
       for (let i = 0; i < frameData.length; i++) {
         positions[i * 3] = frameData[i].x;
-        positions[i * 3 + 1] = 0 - frameData[i].z; 
+        positions[i * 3 + 1] = 0 - frameData[i].z;
         positions[i * 3 + 2] = -frameData[i].y;
+        // Heatmap color: t=0 (minZ, light blue), t=1 (maxZ, strong red)
+        const t = (frameData[i].z - minZ) / (maxZ - minZ || 1);
+        // Light blue: rgb(0.7, 0.85, 1), Red: rgb(1, 0.1, 0.1)
+        colors[i * 3] = t * 1 + (1 - t) * 0.7;      // R: 0.7 (blue) to 1 (red)
+        colors[i * 3 + 1] = t * 0.1 + (1 - t) * 0.85; // G: 0.85 (blue) to 0.1 (red)
+        colors[i * 3 + 2] = t * 0.1 + (1 - t) * 1;    // B: 1 (blue) to 0.1 (red)
       }
       const geom = new THREE.BufferGeometry();
       geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geom.setAttribute("color", new THREE.BufferAttribute(colors, 3));
       return geom;
     }
     // Surface mesh for regular grid
     const positions = new Float32Array(frameData.length * 3);
+    const colors = new Float32Array(frameData.length * 3);
     for (let i = 0; i < frameData.length; i++) {
       positions[i * 3] = frameData[i].x;
-      positions[i * 3 + 1] = 0 - frameData[i].z; 
-      positions[i * 3 + 2] = -frameData[i].y;   
+      positions[i * 3 + 1] = 0 - frameData[i].z;
+      positions[i * 3 + 2] = -frameData[i].y;
+      // Heatmap color: t=0 (minZ, light blue), t=1 (maxZ, strong red)
+      const t = (frameData[i].z - minZ) / (maxZ - minZ || 1);
+      // Light blue: rgb(0.7, 0.85, 1), Red: rgb(1, 0.1, 0.1)
+      colors[i * 3] = t * 1 + (1 - t) * 0.7;      // R: 0.7 (blue) to 1 (red)
+      colors[i * 3 + 1] = t * 0.1 + (1 - t) * 0.85; // G: 0.85 (blue) to 0.1 (red)
+      colors[i * 3 + 2] = t * 0.1 + (1 - t) * 1;    // B: 1 (blue) to 0.1 (red)
     }
     const indices = [];
     for (let y = 0; y < gridHeight - 1; y++) {
@@ -88,6 +110,7 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
     }
     const geom = new THREE.BufferGeometry();
     geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geom.setAttribute("color", new THREE.BufferAttribute(colors, 3));
     geom.setIndex(indices);
     geom.computeVertexNormals();
     return geom;
@@ -117,11 +140,11 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
         <Canvas camera={{ position: [0, 0, Math.max(gridHeight, gridWidth) * 1.5 / zoom], near: 0.1, far: 10000 }}>
           {geometry && geometry.index ? (
             <mesh geometry={geometry} rotation={[rotation[0], rotation[1], rotation[2]]} position={[-center.x, -center.y, -center.z]}>
-              <meshStandardMaterial color="#62c087" side={THREE.DoubleSide} wireframe={false} />
+              <meshStandardMaterial vertexColors side={THREE.DoubleSide} wireframe={false} />
             </mesh>
           ) : geometry ? (
             <points geometry={geometry} rotation={[rotation[0], rotation[1], rotation[2]]} position={[-center.x, -center.y, -center.z]}>
-              <pointsMaterial color="#62c087" size={2} />
+              <pointsMaterial vertexColors size={2} />
             </points>
           ) : (
             <mesh rotation={rotation}>
