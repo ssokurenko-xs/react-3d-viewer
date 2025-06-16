@@ -1,5 +1,6 @@
+import React, { useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { useEffect, useState } from "react";
+import * as THREE from "three";
 
 const ROTATE_STEP = 0.5; // Rotation step in radians
 
@@ -12,7 +13,10 @@ interface ViewerProps {
 export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }: ViewerProps) {
   const [rotation, setRotation] = useState<[number, number, number]>([0, 0, 0]);
   const [frame, setFrame] = useState(0);
-  const [frameData, setFrameData] = useState([]);
+  // Type for frameData
+  const [frameData, setFrameData] = useState<{ x: number; y: number; z: number }[]>([]);
+  // Camera zoom state
+  const [zoom, setZoom] = useState(1);
 
   useEffect(() => {
     if (data.length > 0) {
@@ -43,15 +47,89 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Handle + and - keys for zoom
+  useEffect(() => {
+    const handleZoomKey = (e: KeyboardEvent) => {
+      if (e.key === "+") setZoom((z) => Math.min(z * 1.2, 20));
+      if (e.key === "-") setZoom((z) => Math.max(z / 1.2, 0.05));
+    };
+    window.addEventListener("keydown", handleZoomKey);
+    return () => window.removeEventListener("keydown", handleZoomKey);
+  }, []);
+
+  // Generate indexed BufferGeometry from frameData as a surface or fallback to point cloud
+  const geometry = React.useMemo(() => {
+    if (!frameData || frameData.length === 0) return null;
+    if (frameData.length < 4) {
+      const positions = new Float32Array(frameData.length * 3);
+      for (let i = 0; i < frameData.length; i++) {
+        positions[i * 3] = frameData[i].x;
+        positions[i * 3 + 1] = 0 - frameData[i].z; 
+        positions[i * 3 + 2] = -frameData[i].y;
+      }
+      const geom = new THREE.BufferGeometry();
+      geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      return geom;
+    }
+    // Surface mesh for regular grid
+    const positions = new Float32Array(frameData.length * 3);
+    for (let i = 0; i < frameData.length; i++) {
+      positions[i * 3] = frameData[i].x;
+      positions[i * 3 + 1] = 0 - frameData[i].z; 
+      positions[i * 3 + 2] = -frameData[i].y;   
+    }
+    const indices = [];
+    for (let y = 0; y < gridHeight - 1; y++) {
+      for (let x = 0; x < gridWidth - 1; x++) {
+        const i = y * gridWidth + x;
+        indices.push(i, i + 1, i + gridWidth);
+        indices.push(i + 1, i + gridWidth + 1, i + gridWidth);
+      }
+    }
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geom.setIndex(indices);
+    geom.computeVertexNormals();
+    return geom;
+  }, [frameData, gridHeight, gridWidth]);
+
+  const center = React.useMemo(() => {
+    if (!frameData || frameData.length === 0) return { x: 0, y: 0, z: 0 };
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const p of frameData) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+      if (p.z < minZ) minZ = p.z;
+      if (p.z > maxZ) maxZ = p.z;
+    }
+    return {
+      x: (minX + maxX) / 2,
+      y: (minY + maxY) / 2,
+      z: (minZ + maxZ) / 2,
+    };
+  }, [frameData]);
+
   return (
     <div className="card w-200 h-200 m-auto bg-base-100 card-xs shadow-sm">
       <div className="card-body pt-4">
-        <Canvas>
-          <mesh rotation={rotation}>
-            <boxGeometry args={[2, 2, 2]} />
-            <meshPhongMaterial />
-          </mesh>
-          <ambientLight intensity={0.1} />
+        <Canvas camera={{ position: [0, 0, Math.max(gridHeight, gridWidth) * 1.5 / zoom], near: 0.1, far: 10000 }}>
+          {geometry && geometry.index ? (
+            <mesh geometry={geometry} rotation={[rotation[0], rotation[1], rotation[2]]} position={[-center.x, -center.y, -center.z]}>
+              <meshStandardMaterial color="#62c087" side={THREE.DoubleSide} wireframe={false} />
+            </mesh>
+          ) : geometry ? (
+            <points geometry={geometry} rotation={[rotation[0], rotation[1], rotation[2]]} position={[-center.x, -center.y, -center.z]}>
+              <pointsMaterial color="#62c087" size={2} />
+            </points>
+          ) : (
+            <mesh rotation={rotation}>
+              <boxGeometry args={[2, 2, 2]} />
+              <meshPhongMaterial />
+            </mesh>
+          )}
+          <ambientLight intensity={0.3} />
           <directionalLight position={[0, 0, 5]} color="#62c087" />
         </Canvas>
 
