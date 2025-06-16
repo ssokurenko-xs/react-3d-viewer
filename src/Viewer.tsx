@@ -5,9 +5,11 @@ const ROTATE_STEP = 0.5; // Rotation step in radians
 
 interface ViewerProps {
   data: any[];
+  gridHeight: number;
+  gridWidth: number;
 }
 
-export default function Viewer({ data = [] }: ViewerProps) {
+export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }: ViewerProps) {
   const [rotation, setRotation] = useState<[number, number, number]>([0, 0, 0]);
   const [frame, setFrame] = useState(0);
   const [frameData, setFrameData] = useState([]);
@@ -126,7 +128,6 @@ export default function Viewer({ data = [] }: ViewerProps) {
                 ↓
               </button>
             </div>
-
           </div>
         </div>
       </ div>
