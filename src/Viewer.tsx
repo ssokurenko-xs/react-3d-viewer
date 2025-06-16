@@ -3,6 +3,8 @@ import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 
 const ROTATE_STEP = 0.5; // Rotation step in radians
+const DEPTH_SCALE_DEFAULT = 0.5; // Default scale for depth (z) values
+const SCALE_STEP = 0.01; // Step for depth scale adjustment
 
 interface ViewerProps {
   data: any[];
@@ -11,12 +13,14 @@ interface ViewerProps {
 }
 
 export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }: ViewerProps) {
-  const [rotation, setRotation] = useState<[number, number, number]>([0, 0, 0]);
+  const [rotation, setRotation] = useState<[number, number, number]>([0, Math.PI / 2, 0]);
   const [frame, setFrame] = useState(0);
   // Type for frameData
   const [frameData, setFrameData] = useState<{ x: number; y: number; z: number }[]>([]);
   // Camera zoom state
   const [zoom, setZoom] = useState(1);
+  // Depth scale state
+  const [depthScale, setDepthScale] = useState(DEPTH_SCALE_DEFAULT);
 
   useEffect(() => {
     if (data.length > 0) {
@@ -42,6 +46,8 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
       if (e.key === "ArrowDown") rotate("x", ROTATE_STEP);
       if (e.key === "ArrowLeft") rotate("y", -ROTATE_STEP);
       if (e.key === "ArrowRight") rotate("y", ROTATE_STEP);
+      if (e.key === "+" || e.key === "=") setDepthScale((s) => Math.min(1, s + SCALE_STEP));
+      if (e.key === "-") setDepthScale((s) => Math.max(0, s - SCALE_STEP));
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -72,14 +78,12 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
       const colors = new Float32Array(frameData.length * 3);
       for (let i = 0; i < frameData.length; i++) {
         positions[i * 3] = frameData[i].x;
-        positions[i * 3 + 1] = 0 - frameData[i].z;
+        positions[i * 3 + 1] = 0 - frameData[i].z * depthScale; // Use state for depth scale
         positions[i * 3 + 2] = -frameData[i].y;
-        // Heatmap color: t=0 (minZ, light blue), t=1 (maxZ, strong red)
         const t = (frameData[i].z - minZ) / (maxZ - minZ || 1);
-        // Light blue: rgb(0.7, 0.85, 1), Red: rgb(1, 0.1, 0.1)
-        colors[i * 3] = t * 1 + (1 - t) * 0.7;      // R: 0.7 (blue) to 1 (red)
-        colors[i * 3 + 1] = t * 0.1 + (1 - t) * 0.85; // G: 0.85 (blue) to 0.1 (red)
-        colors[i * 3 + 2] = t * 0.1 + (1 - t) * 1;    // B: 1 (blue) to 0.1 (red)
+        colors[i * 3] = t * 1 + (1 - t) * 0.5;           // R: 0.5 (blue) to 1 (red)
+        colors[i * 3 + 1] = t * 0.1 + (1 - t) * 0.7;     // G: 0.7 (blue) to 0.1 (red)
+        colors[i * 3 + 2] = t * 0.1 + (1 - t) * 1;       // B: 1 (blue) to 0.1 (red)
       }
       const geom = new THREE.BufferGeometry();
       geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
@@ -91,14 +95,13 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
     const colors = new Float32Array(frameData.length * 3);
     for (let i = 0; i < frameData.length; i++) {
       positions[i * 3] = frameData[i].x;
-      positions[i * 3 + 1] = 0 - frameData[i].z;
+      positions[i * 3 + 1] = 0 - frameData[i].z * depthScale;
       positions[i * 3 + 2] = -frameData[i].y;
-      // Heatmap color: t=0 (minZ, light blue), t=1 (maxZ, strong red)
+      // Heatmap color: t=0 (minZ, blue), t=1 (maxZ, strong red)
       const t = (frameData[i].z - minZ) / (maxZ - minZ || 1);
-      // Light blue: rgb(0.7, 0.85, 1), Red: rgb(1, 0.1, 0.1)
-      colors[i * 3] = t * 1 + (1 - t) * 0.7;      // R: 0.7 (blue) to 1 (red)
-      colors[i * 3 + 1] = t * 0.1 + (1 - t) * 0.85; // G: 0.85 (blue) to 0.1 (red)
-      colors[i * 3 + 2] = t * 0.1 + (1 - t) * 1;    // B: 1 (blue) to 0.1 (red)
+      colors[i * 3] = t * 1 + (1 - t) * 0.5;           // R: 0.5 (blue) to 1 (red)
+      colors[i * 3 + 1] = t * 0.1 + (1 - t) * 0.7;     // G: 0.7 (blue) to 0.1 (red)
+      colors[i * 3 + 2] = t * 0.1 + (1 - t) * 1;       // B: 1 (blue) to 0.1 (red)
     }
     const indices = [];
     for (let y = 0; y < gridHeight - 1; y++) {
@@ -114,7 +117,7 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
     geom.setIndex(indices);
     geom.computeVertexNormals();
     return geom;
-  }, [frameData, gridHeight, gridWidth]);
+  }, [frameData, gridHeight, gridWidth, depthScale]);
 
   const center = React.useMemo(() => {
     if (!frameData || frameData.length === 0) return { x: 0, y: 0, z: 0 };
@@ -139,21 +142,29 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
       <div className="card-body pt-4">
         <Canvas camera={{ position: [0, 0, Math.max(gridHeight, gridWidth) * 1.5 / zoom], near: 0.1, far: 10000 }}>
           {geometry && geometry.index ? (
-            <mesh geometry={geometry} rotation={[rotation[0], rotation[1], rotation[2]]} position={[-center.x, -center.y, -center.z]}>
+            <mesh
+              geometry={geometry}
+              rotation={[rotation[0], rotation[1], rotation[2]]}
+              position={[0, -center.y + 30, -center.z]}
+            >
               <meshStandardMaterial vertexColors side={THREE.DoubleSide} wireframe={false} />
             </mesh>
           ) : geometry ? (
-            <points geometry={geometry} rotation={[rotation[0], rotation[1], rotation[2]]} position={[-center.x, -center.y, -center.z]}>
+            <points
+              geometry={geometry}
+              rotation={[rotation[0], rotation[1], rotation[2]]}
+              position={[0, -center.y + 30, -center.z]}
+            >
               <pointsMaterial vertexColors size={2} />
             </points>
           ) : (
-            <mesh rotation={rotation}>
+            <mesh rotation={rotation} position={[0, 30, 0]}>
               <boxGeometry args={[2, 2, 2]} />
               <meshPhongMaterial />
             </mesh>
           )}
-          <ambientLight intensity={0.3} />
-          <directionalLight position={[0, 0, 5]} color="#62c087" />
+          <ambientLight intensity={0.5} />
+          <directionalLight position={[0, 0, 3]} color="#ff" />
         </Canvas>
 
         <div className="flex flex-row mt-4 border-t py-3 border-gray-200 w-full">
@@ -205,13 +216,21 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
               >
                 ↑
               </button>
-              <div className="flex flex-row justify-between w-30 mt-1 mb-1">
+              <div className="flex flex-row justify-between w-37 mt-1 mb-1 items-center">
                 <button
                   onClick={() => rotate("y", -ROTATE_STEP)}
                   aria-label="Rotate Left"
                   className="btn btn-circle"
                 >
                   ←
+                </button>
+                <button
+                  onClick={() => setRotation([0, Math.PI / 2, 0])}
+                  aria-label="Reset Rotation"
+                  className="btn btn-circle mx-2"
+                  style={{ fontWeight: 'bold' }}
+                >
+                  ⟳
                 </button>
                 <button
                   onClick={() => rotate("y", ROTATE_STEP)}
@@ -228,6 +247,23 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
               >
                 ↓
               </button>
+              <div className="flex flex-row items-center mt-4">
+                <button
+                  className="btn btn-xs mr-2"
+                  onClick={() => setDepthScale((s) => Math.max(0, s - SCALE_STEP))}
+                  aria-label="Decrease Z Scale"
+                >
+                  -
+                </button>
+                <span className="text-xs font-mono select-none">Depth scale: {depthScale ? `${(depthScale * 100).toFixed(0)}%` : 'flat'}</span>
+                <button
+                  className="btn btn-xs ml-2"
+                  onClick={() => setDepthScale((s) => Math.min(1, s + SCALE_STEP))}
+                  aria-label="Increase Z Scale"
+                >
+                  +
+                </button>
+              </div>
             </div>
           </div>
         </div>
