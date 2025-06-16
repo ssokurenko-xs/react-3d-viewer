@@ -1,15 +1,13 @@
 import { Canvas } from "@react-three/fiber";
 import { useEffect, useState } from "react";
-import type { ReactNode, ReactElement } from "react";
 
 const ROTATE_STEP = 0.5; // Rotation step in radians
 
 interface ViewerProps {
-  children: ((rotation: [number, number, number]) => ReactElement) | ReactNode;
-  data: any[]
+  data: any[];
 }
 
-export default function Viewer({ children, data = [] }: ViewerProps) {
+export default function Viewer({ data = [] }: ViewerProps) {
   const [rotation, setRotation] = useState<[number, number, number]>([0, 0, 0]);
   const [frame, setFrame] = useState(0);
   const [frameData, setFrameData] = useState([]);
@@ -47,9 +45,12 @@ export default function Viewer({ children, data = [] }: ViewerProps) {
     <div className="card w-200 h-200 m-auto bg-base-100 card-xs shadow-sm">
       <div className="card-body pt-4">
         <Canvas>
-          {typeof children === "function"
-            ? (children as (rotation: [number, number, number]) => ReactElement)(rotation)
-            : children}
+          <mesh rotation={rotation}>
+            <boxGeometry args={[2, 2, 2]} />
+            <meshPhongMaterial />
+          </mesh>
+          <ambientLight intensity={0.1} />
+          <directionalLight position={[0, 0, 5]} color="#62c087" />
         </Canvas>
 
         <div className="flex flex-row mt-4 border-t py-3 border-gray-200 w-full">
