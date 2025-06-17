@@ -139,9 +139,9 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
   }, [frameData]);
 
   return (
-    <div className="card w-200 h-200 m-auto bg-base-100 card-xs shadow-sm">
-      <div className="card-body pt-4">
-        <Canvas camera={{ position: [0, 0, Math.max(gridHeight, gridWidth) * 0.1 / zoom], near: 0.3, far: 100000 }}>
+    <div className="card w-200 h-160 m-auto bg-base-100 shadow-sm">
+      <div className="card-body">
+        <Canvas camera={{ position: [0, 0, 0], near: 0.6, far: 100000 }}>
           {geometry && geometry.index ? (
             <mesh
               geometry={geometry}
