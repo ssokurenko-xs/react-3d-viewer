@@ -18,8 +18,6 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
   const [frame, setFrame] = useState(0);
   // Type for frameData
   const [frameData, setFrameData] = useState<{ x: number; y: number; z: number }[]>([]);
-  // Camera zoom state
-  const [zoom, setZoom] = useState(1);
   // Depth scale state
   const [depthScale, setDepthScale] = useState(DEPTH_SCALE_DEFAULT);
 
@@ -52,16 +50,6 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  // Handle + and - keys for zoom
-  useEffect(() => {
-    const handleZoomKey = (e: KeyboardEvent) => {
-      if (e.key === "+") setZoom((z) => Math.min(z * 1.2, 20));
-      if (e.key === "-") setZoom((z) => Math.max(z / 1.2, 0.05));
-    };
-    window.addEventListener("keydown", handleZoomKey);
-    return () => window.removeEventListener("keydown", handleZoomKey);
   }, []);
 
   // Generate indexed BufferGeometry from frameData as a surface or fallback to point cloud
@@ -256,7 +244,9 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
                 >
                   -
                 </button>
-                <span className="text-xs font-mono select-none">Depth scale: {depthScale ? `${(depthScale * 100).toFixed(0)}%` : 'flat'}</span>
+                <div className="text-xs font-mono select-none">
+                  Depth scale: {depthScale ? `${(depthScale * 100).toFixed(0)}%` : 'flat'}
+                </div>
                 <button
                   className="btn btn-xs ml-2"
                   onClick={() => setDepthScale((s) => Math.min(1, s + SCALE_STEP))}
