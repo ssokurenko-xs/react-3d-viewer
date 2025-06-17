@@ -61,6 +61,10 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
       if (e.key === "ArrowRight") rotate("y", ROTATE_STEP);
       if (e.key === "+" || e.key === "=") setDepthScale((s) => Math.min(1, s + SCALE_STEP));
       if (e.key === "-") setDepthScale((s) => Math.max(0, s - SCALE_STEP));
+      if (e.code === "Space") {
+        e.preventDefault();
+        setPlaying((p) => !p);
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -294,7 +298,7 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
                   </button>
                 </div>
                 <div className="text-xs font-mono select-none">
-                  Depth: {depthScale ? `${(depthScale * 100).toFixed(0)}%` : 'flat'}
+                  Depth: {!!depthScale ? `${(depthScale * 100).toFixed(0)}%` : 'flat'}
                 </div>
                 <div className="tooltip" data-tip="Increase depth scale">
                   <button
