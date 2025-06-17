@@ -3,8 +3,9 @@ import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 
 const ROTATE_STEP = 0.5; // Rotation step in radians
-const DEPTH_SCALE_DEFAULT = 0.5; // Default scale for depth (z) values
+const DEPTH_SCALE_DEFAULT = 0.1; // Default scale for depth (z) values
 const SCALE_STEP = 0.01; // Step for depth scale adjustment
+const ROTATION: [number, number, number] = [0, Math.PI / 2, Math.PI / 2]; // Default rotation angles in radians
 
 interface ViewerProps {
   data: any[];
@@ -13,7 +14,7 @@ interface ViewerProps {
 }
 
 export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }: ViewerProps) {
-  const [rotation, setRotation] = useState<[number, number, number]>([0, Math.PI / 2, 0]);
+  const [rotation, setRotation] = useState<[number, number, number]>(ROTATION);
   const [frame, setFrame] = useState(0);
   // Type for frameData
   const [frameData, setFrameData] = useState<{ x: number; y: number; z: number }[]>([]);
@@ -140,7 +141,7 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
   return (
     <div className="card w-200 h-200 m-auto bg-base-100 card-xs shadow-sm">
       <div className="card-body pt-4">
-        <Canvas camera={{ position: [0, 0, Math.max(gridHeight, gridWidth) * 1.5 / zoom], near: 0.1, far: 10000 }}>
+        <Canvas camera={{ position: [0, 0, Math.max(gridHeight, gridWidth) * 0.1 / zoom], near: 0.3, far: 100000 }}>
           {geometry && geometry.index ? (
             <mesh
               geometry={geometry}
@@ -164,7 +165,7 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
             </mesh>
           )}
           <ambientLight intensity={0.5} />
-          <directionalLight position={[0, 0, 3]} color="#ff" />
+          <directionalLight position={[0, 0, 3]} color="white" />
         </Canvas>
 
         <div className="flex flex-row mt-4 border-t py-3 border-gray-200 w-full">
@@ -225,7 +226,7 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
                   ←
                 </button>
                 <button
-                  onClick={() => setRotation([0, Math.PI / 2, 0])}
+                  onClick={() => setRotation(ROTATION)}
                   aria-label="Reset Rotation"
                   className="btn btn-circle mx-2"
                   style={{ fontWeight: 'bold' }}
