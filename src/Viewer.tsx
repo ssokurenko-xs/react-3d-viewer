@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 
-const ROTATE_STEP = 0.5; // Rotation step in radians
+const ROTATE_STEP = 0.2; // Rotation step in radians
 const DEPTH_SCALE_DEFAULT = 0.1; // Default scale for depth (z) values
 const SCALE_STEP = 0.01; // Step for depth scale adjustment
 const ROTATION: [number, number, number] = [0, Math.PI / 2, Math.PI / 2]; // Default rotation angles in radians
+const FRAME_DURATION = 200; // Duration for each frame in milliseconds
 
 interface ViewerProps {
   data: any[];
@@ -21,6 +22,18 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
   // Depth scale state
   const [depthScale, setDepthScale] = useState(DEPTH_SCALE_DEFAULT);
   const [isAlertOpen, setIsAlertOpen] = useState(true);
+  // Animation state
+  const [playing, setPlaying] = useState(false);
+
+  // Play/pause frame animation
+  useEffect(() => {
+    if (!playing) return;
+    if (!data?.length) return;
+    const interval = setInterval(() => {
+      setFrame((f) => (f + 1) % data.length);
+    }, FRAME_DURATION);
+    return () => clearInterval(interval);
+  }, [playing, data]);
 
   useEffect(() => {
     if (data.length > 0) {
@@ -129,7 +142,7 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
 
   return (
     <div className="card w-200 h-160 m-auto bg-base-100 shadow-sm">
-      <div className="card-body">
+      <div className="card-body !p-3">
         <Canvas camera={{ position: [0, 0, 0], near: 0.6, far: 100000 }}>
           {geometry && geometry.index ? (
             <mesh
@@ -157,119 +170,157 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
           <directionalLight position={[0, 0, 3]} color="white" />
         </Canvas>
 
-        <div className="flex flex-row mt-4 border-t py-3 border-gray-200 w-full">
-          {/* Frame range slider on the left */}
+        <div className="flex flex-row mt-4 border-t pt-2 border-gray-200 w-full">
           <div className="ml-8 flex items-center w-1/2">
-            <button
-              onClick={() => setFrame((f) => Math.max(0, f - 1))}
-              aria-label="Previous Frame"
-              className="btn btn-sm mr-2"
-            >
-              Prev
-            </button>
+            {playing ? (
+              <div className="tooltip" data-tip="Pause animation">
+                <button
+                  onClick={() => setPlaying(false)}
+                  aria-label="Pause Animation"
+                  className="btn btn-circle btn-error mr-2"
+                  style={{ minWidth: 36 }}
+                >
+                  ⏸︎
+                </button>
+              </div>
+            ) : (
+              <div className="tooltip" data-tip="Play animation">
+                <button
+                  onClick={() => setPlaying(true)}
+                  aria-label="Play Animation"
+                  className="btn btn-circle btn-success mr-2"
+                  style={{ minWidth: 36 }}
+                >
+                  ⏵︎
+                </button>
+              </div>
+            )}
+            <div className="tooltip" data-tip="Previous frame">
+              <button
+                onClick={() => setFrame((f) => Math.max(0, f - 1))}
+                aria-label="Previous Frame"
+                className="btn btn-ghost btn-sm mr-1"
+              >
+                ⏪︎
+              </button>
+            </div>
             <div className="relative w-full flex-1">
               <input
                 type="range"
                 min={0}
                 max={data?.length ? data?.length - 1 : 0}
-                className="range text-green-400 w-full"
+                className="range range-sm range-success w-full"
                 aria-label="Frame range"
                 onChange={(e) => setFrame(Number(e.target.value))}
                 value={frame}
                 style={{ zIndex: 1 }}
               />
               <div
-                className="absolute -top-6 left-1/2 text-xs font-bold select-none pointer-events-none transition-all duration-100"
+                className="absolute -top-6 left-1/2 text-xs font-bold select-none pointer-events-none"
                 style={{
-                  minWidth: '2em',
-                  textAlign: 'center',
                   transform: 'translateX(-50%)',
                 }}
               >
-                Frame: <span className="text-green-600">{frame + 1}</span>
+                Frame: <span className="text-success">{frame + 1}</span>
               </div>
             </div>
-            <button
-              onClick={() => setFrame((f) => Math.min(data.length - 1, f + 1))}
-              aria-label="Previous Frame"
-              className="btn btn-sm ml-2"
-            >
-              Next
-            </button>
+            <div className="tooltip" data-tip="Next frame">
+              <button
+                onClick={() => setFrame((f) => Math.min(data.length - 1, f + 1))}
+                aria-label="Previous Frame"
+                className="btn btn-ghost btn-sm ml-1"
+              >
+                ⏩︎
+              </button>
+            </div>
           </div>
           <div className="flex flex-col items-center w-1/2">
             <div className="w-50 flex flex-col items-center">
-              <button
-                onClick={() => rotate("x", -ROTATE_STEP)}
-                aria-label="Rotate Up"
-                className="btn btn-circle mb-1"
-              >
-                ↑
-              </button>
+              <div className="tooltip" data-tip="Rotate up">
+                <button
+                  onClick={() => rotate("x", -ROTATE_STEP)}
+                  aria-label="Rotate Up"
+                  className="btn btn-circle mb-1"
+                >
+                  ↑
+                </button>
+              </div>
               <div className="flex flex-row justify-between w-37 mt-1 mb-1 items-center">
-                <button
-                  onClick={() => rotate("y", -ROTATE_STEP)}
-                  aria-label="Rotate Left"
-                  className="btn btn-circle"
-                >
-                  ←
-                </button>
-                <button
-                  onClick={() => setRotation(ROTATION)}
-                  aria-label="Reset Rotation"
-                  className="btn btn-circle mx-2"
-                  style={{ fontWeight: 'bold' }}
-                >
-                  ⟳
-                </button>
-                <button
-                  onClick={() => rotate("y", ROTATE_STEP)}
-                  aria-label="Rotate Right"
-                  className="btn btn-circle"
-                >
-                  →
-                </button>
-              </div>
-              <button
-                onClick={() => rotate("x", ROTATE_STEP)}
-                aria-label="Rotate Down"
-                className="btn btn-circle mt-1"
-              >
-                ↓
-              </button>
-              <div className="flex flex-row items-center mt-4">
-                <button
-                  className="btn btn-xs mr-2"
-                  onClick={() => setDepthScale((s) => Math.max(0, s - SCALE_STEP))}
-                  aria-label="Decrease Z Scale"
-                >
-                  -
-                </button>
-                <div className="text-xs font-mono select-none">
-                  Depth scale: {depthScale ? `${(depthScale * 100).toFixed(0)}%` : 'flat'}
+                <div className="tooltip" data-tip="Rotate left">
+                  <button
+                    onClick={() => rotate("y", -ROTATE_STEP)}
+                    aria-label="Rotate Left"
+                    className="btn btn-circle"
+                  >
+                    ←
+                  </button>
                 </div>
+                <div className="tooltip" data-tip="Reset rotation">
+                  <button
+                    onClick={() => setRotation(ROTATION)}
+                    aria-label="Reset Rotation"
+                    className="btn btn-ghost btn-error btn-circle mx-2"
+                  >
+                    ⟳
+                  </button>
+                </div>
+                <div className="tooltip" data-tip="Rotate right">
+                  <button
+                    onClick={() => rotate("y", ROTATE_STEP)}
+                    aria-label="Rotate Right"
+                    className="btn btn-circle"
+                  >
+                    →
+                  </button>
+                </div>
+              </div>
+              <div className="tooltip" data-tip="Rotate down">
                 <button
-                  className="btn btn-xs ml-2"
-                  onClick={() => setDepthScale((s) => Math.min(1, s + SCALE_STEP))}
-                  aria-label="Increase Z Scale"
+                  onClick={() => rotate("x", ROTATE_STEP)}
+                  aria-label="Rotate Down"
+                  className="btn btn-circle mt-1"
                 >
-                  +
+                  ↓
                 </button>
               </div>
-
+              <div className="flex flex-row items-center mt-4">
+                <div className="tooltip" data-tip="Decrease depth scale">
+                  <button
+                    className="btn btn-xs mr-2"
+                    onClick={() => setDepthScale((s) => Math.max(0, s - SCALE_STEP))}
+                    aria-label="Decrease Z Scale"
+                  >
+                    -
+                  </button>
+                </div>
+                <div className="text-xs font-mono select-none">
+                  Depth: {depthScale ? `${(depthScale * 100).toFixed(0)}%` : 'flat'}
+                </div>
+                <div className="tooltip" data-tip="Increase depth scale">
+                  <button
+                    className="btn btn-xs ml-2"
+                    onClick={() => setDepthScale((s) => Math.min(1, s + SCALE_STEP))}
+                    aria-label="Increase Z Scale"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
         </div>
         {isAlertOpen && (<div role="alert" className="alert alert-info alert-outline justify-between mt-2">
           <div className="flex-1 text-black">Tip: Use your keyboard arrow keys to rotate the shape. Press + or - to increase or decrease the depth scale.</div>
-          <button
-            className="btn btn-xs ml-2 flex-shrink-0"
-            onClick={() => setIsAlertOpen(false)}
-            aria-label="Close Alert"
-          >
-            OK
-          </button>
+          <div className="tooltip" data-tip="Hide tip">
+            <button
+              className="btn btn-xs btn-ghost ml-2 flex-shrink-0"
+              onClick={() => setIsAlertOpen(false)}
+              aria-label="Close Alert"
+            >
+              OK
+            </button>
+          </div>
         </div>)}
       </ div>
     </div>

@@ -1,4 +1,4 @@
-export const FRAME_COUNT = 100;
+export const FRAME_COUNT =80;
 export const GRID_WIDTH = 256;
 export const GRID_HEIGHT = 512;
 export const PRESSURE_CENTERS = [
