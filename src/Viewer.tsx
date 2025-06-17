@@ -20,6 +20,7 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
   const [frameData, setFrameData] = useState<{ x: number; y: number; z: number }[]>([]);
   // Depth scale state
   const [depthScale, setDepthScale] = useState(DEPTH_SCALE_DEFAULT);
+  const [isAlertOpen, setIsAlertOpen] = useState(true);
 
   useEffect(() => {
     if (data.length > 0) {
@@ -255,9 +256,21 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
                   +
                 </button>
               </div>
+
             </div>
           </div>
+
         </div>
+        {isAlertOpen && (<div role="alert" className="alert alert-info alert-outline justify-between mt-2">
+          <div className="flex-1 text-black">Tip: Use your keyboard arrow keys to rotate the shape. Press + or - to increase or decrease the depth scale.</div>
+          <button
+            className="btn btn-xs ml-2 flex-shrink-0"
+            onClick={() => setIsAlertOpen(false)}
+            aria-label="Close Alert"
+          >
+            OK
+          </button>
+        </div>)}
       </ div>
     </div>
   );
