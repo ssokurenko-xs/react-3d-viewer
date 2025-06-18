@@ -2,19 +2,19 @@ import React, { useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 
-const ROTATE_STEP = 0.2; // Rotation step in radians
-const DEPTH_SCALE_DEFAULT = 0.1; // Default scale for depth (z) values
-const SCALE_STEP = 0.01; // Step for depth scale adjustment
+const ROTATE_STEP: number = 0.2; // Rotation step in radians
+const DEPTH_SCALE_DEFAULT: number = 0.1; // Default scale for depth (z) values
+const SCALE_STEP: number = 0.01; // Step for depth scale adjustment
 const ROTATION: [number, number, number] = [0, Math.PI / 2, Math.PI / 2]; // Default rotation angles in radians
-const FRAME_DURATION = 200; // Duration for each frame in milliseconds
+const FRAME_DURATION_MS: number = 200; // Duration for each frame in milliseconds
 
-interface ViewerProps {
+interface Props {
   data: any[];
   gridHeight: number;
   gridWidth: number;
 }
 
-export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }: ViewerProps) {
+export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }: Props) {
   const [rotation, setRotation] = useState<[number, number, number]>(ROTATION);
   const [frame, setFrame] = useState(0);
   // Type for frameData
@@ -31,7 +31,7 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
     if (!data?.length) return;
     const interval = setInterval(() => {
       setFrame((f) => (f + 1) % data.length);
-    }, FRAME_DURATION);
+    }, FRAME_DURATION_MS);
     return () => clearInterval(interval);
   }, [playing, data]);
 
@@ -125,6 +125,14 @@ export default function Viewer({ data = [], gridHeight = 512, gridWidth = 256 }:
     geom.computeVertexNormals();
     return geom;
   }, [frameData, gridHeight, gridWidth, depthScale]);
+
+  // Dispose geometry to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (!geometry) return;
+      geometry.dispose();
+    };
+  }, [geometry]);
 
   const center = React.useMemo(() => {
     if (!frameData || frameData.length === 0) return { x: 0, y: 0, z: 0 };
